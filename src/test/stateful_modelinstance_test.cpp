@@ -128,7 +128,8 @@ public:
     }
 
     void injectSequence(uint64_t sequenceId, ovms::model_memory_state_t state) {
-        getMockedSequenceManager()->mockCreateSequence(sequenceId);
+        ovms::SequenceProcessingSpec spec(ovms::SEQUENCE_START, sequenceId);
+        getMockedSequenceManager()->mockCreateSequence(spec);
         getMockedSequenceManager()->getSequence(sequenceId).updateMemoryState(state);
     }
 };

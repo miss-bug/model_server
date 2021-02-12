@@ -35,13 +35,18 @@ private:
     uint32_t timeout;
     uint32_t maxSequenceNumber;
     std::mutex mutex;
+    uint64_t sequenceIdCounter;
+
+    void initializeSequenceIdCounter();
+
+    uint64_t getUniqueSequenceId();
 
 protected:
     std::unordered_map<uint64_t, Sequence> sequences;
 
     Status hasSequence(const uint64_t sequenceId);
 
-    Status createSequence(const uint64_t sequenceId);
+    Status createSequence(SequenceProcessingSpec& sequenceProcessingSpec);
 
     Status terminateSequence(const uint64_t sequenceId);
 
@@ -49,7 +54,7 @@ public:
     SequenceManager() = default;
     SequenceManager(uint32_t timeout, uint32_t maxSequenceNumber) :
         timeout(timeout),
-        maxSequenceNumber(maxSequenceNumber) {}
+        maxSequenceNumber(maxSequenceNumber) { initializeSequenceIdCounter(); }
 
     uint64_t getSequencesCount() {
         return sequences.size();

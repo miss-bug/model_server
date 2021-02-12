@@ -151,8 +151,8 @@ public:
         return ovms::SequenceManager::hasSequence(sequenceId);
     }
 
-    ovms::Status mockCreateSequence(const uint64_t& sequenceId) {
-        return ovms::SequenceManager::createSequence(sequenceId);
+    ovms::Status mockCreateSequence(ovms::SequenceProcessingSpec& sequenceProcessingSpec) {
+        return ovms::SequenceManager::createSequence(sequenceProcessingSpec);
     }
 
     ovms::Status mockTerminateSequence(const uint64_t& sequenceId) {

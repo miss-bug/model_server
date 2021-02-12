@@ -16,9 +16,35 @@
 
 #include "sequence_manager.hpp"
 
+#include <limits>
+#include <random>
+
 #include "logging.hpp"
 
 namespace ovms {
+
+void SequenceManager::initializeSequenceIdCounter() {
+    std::random_device rd;
+    std::mt19937_64 gen(rd());
+
+    std::uniform_int_distribution<uint64_t> dis(
+        std::numeric_limits<uint64_t>::min(),
+        std::numeric_limits<uint64_t>::max());
+    this->sequenceIdCounter = dis(gen);
+}
+
+uint64_t SequenceManager::getUniqueSequenceId() {
+    SPDLOG_LOGGER_DEBUG(sequence_manager_logger, "No sequence id has been provided on SEQUENCE_START. Seeking unique sequence id...");
+    bool uniqueIdFound = false;
+    while (!uniqueIdFound) {
+        if (sequenceExists(this->sequenceIdCounter) || this->sequenceIdCounter == 0)
+            this->sequenceIdCounter++;
+        else
+            uniqueIdFound = true;
+    }
+    SPDLOG_LOGGER_DEBUG(sequence_manager_logger, "Found unique sequence id: {}", this->sequenceIdCounter);
+    return this->sequenceIdCounter;
+}
 
 const uint32_t SequenceManager::getTimeout() const {
     return timeout;
@@ -66,11 +92,17 @@ Status SequenceManager::hasSequence(const uint64_t sequenceId) {
     return StatusCode::OK;
 }
 
-Status SequenceManager::createSequence(const uint64_t sequenceId) {
-    /* TODO: Generate unique ID if not provided by the client
+Status SequenceManager::createSequence(SequenceProcessingSpec& sequenceProcessingSpec) {
+    uint64_t sequenceId = sequenceProcessingSpec.getSequenceId();
+
     if (sequenceId == 0) {
-    } 
-    */
+        uint64_t uniqueSequenceId = getUniqueSequenceId();
+        SPDLOG_LOGGER_DEBUG(sequence_manager_logger, "Adding new sequence with ID: {}", uniqueSequenceId);
+        sequences.emplace(uniqueSequenceId, uniqueSequenceId);
+        sequenceProcessingSpec.setSequenceId(uniqueSequenceId);
+        return StatusCode::OK;
+    }
+
     if (sequenceExists(sequenceId)) {
         SPDLOG_LOGGER_DEBUG(sequence_manager_logger, "Sequence with provided ID already exists");
         return StatusCode::SEQUENCE_ALREADY_EXISTS;
@@ -111,7 +143,7 @@ Status SequenceManager::processRequestedSpec(SequenceProcessingSpec& sequencePro
     Status status;
 
     if (sequenceControlInput == SEQUENCE_START) {
-        status = createSequence(sequenceId);
+        status = createSequence(sequenceProcessingSpec);
     } else if (sequenceControlInput == NO_CONTROL_INPUT) {
         status = hasSequence(sequenceId);
     } else {  // sequenceControlInput == SEQUENCE_END
