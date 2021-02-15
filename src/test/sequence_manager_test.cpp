@@ -14,6 +14,7 @@
 // limitations under the License.
 //*****************************************************************************
 #include <chrono>
+#include <limits>
 #include <thread>
 
 #include <gmock/gmock.h>
@@ -22,6 +23,41 @@
 #include "../sequence_manager.hpp"
 #include "../status.hpp"
 #include "stateful_test_utils.hpp"
+
+TEST(SequenceManager, GetUniqueSequenceIdFirstOK) {
+    MockedSequenceManager sequenceManager(120, 24);
+    uint64_t sequenceId = 1;
+
+    EXPECT_EQ(sequenceManager.mockGetUniqueSequenceId(), sequenceId);
+    ovms::SequenceProcessingSpec spec1(ovms::SEQUENCE_START, sequenceId);
+    sequenceManager.mockCreateSequence(spec1);
+
+    EXPECT_EQ(sequenceManager.mockGetUniqueSequenceId(), sequenceId + 1);
+    ovms::SequenceProcessingSpec spec2(ovms::SEQUENCE_START, sequenceId + 1);
+    sequenceManager.mockCreateSequence(spec2);
+
+    EXPECT_EQ(sequenceManager.mockGetUniqueSequenceId(), sequenceId + 2);
+}
+
+TEST(SequenceManager, GetUniqueSequenceIdFirstTaken) {
+    MockedSequenceManager sequenceManager(120, 24);
+    uint64_t sequenceId = 1;
+
+    for (auto i = sequenceId; i < 5; i++) {
+        ovms::SequenceProcessingSpec spec(ovms::SEQUENCE_START, i);
+        sequenceManager.mockCreateSequence(spec);
+    }
+    EXPECT_EQ(sequenceManager.mockGetUniqueSequenceId(), sequenceId + 4);
+}
+
+TEST(SequenceManager, GetUniqueSequenceIdExceedRange) {
+    MockedSequenceManager sequenceManager(120, 24);
+    uint64_t sequenceId = std::numeric_limits<uint64_t>::max();
+    sequenceManager.setSequenceIdCounter(sequenceId);
+    ovms::SequenceProcessingSpec spec(ovms::SEQUENCE_START, sequenceId);
+    sequenceManager.mockCreateSequence(spec);
+    EXPECT_EQ(sequenceManager.mockGetUniqueSequenceId(), 1);
+}
 
 TEST(SequenceManager, CreateSequenceOK) {
     MockedSequenceManager sequenceManager(120, 24);
@@ -41,6 +77,32 @@ TEST(SequenceManager, CreateSequenceConflict) {
     auto status = sequenceManager.mockCreateSequence(spec);
     ASSERT_TRUE(status == ovms::StatusCode::SEQUENCE_ALREADY_EXISTS);
     ASSERT_TRUE(sequenceManager.sequenceExists(sequenceId));
+}
+
+TEST(SequenceManager, CreateSequenceNoIdProvided) {
+    MockedSequenceManager sequenceManager(120, 24);
+    ovms::SequenceProcessingSpec spec1(ovms::SEQUENCE_START, 1);
+    sequenceManager.mockCreateSequence(spec1);
+    ovms::SequenceProcessingSpec spec2(ovms::SEQUENCE_START, 0);
+    ASSERT_TRUE(sequenceManager.sequenceExists(1));
+    auto status = sequenceManager.mockCreateSequence(spec2);
+    ASSERT_TRUE(status.ok());
+    EXPECT_EQ(spec2.getSequenceId(), 2);
+    ASSERT_TRUE(sequenceManager.sequenceExists(spec2.getSequenceId()));
+}
+
+TEST(SequenceManager, CreateSequenceNoIdProvidedExceedingRange) {
+    MockedSequenceManager sequenceManager(120, 24);
+    uint64_t sequenceId = std::numeric_limits<uint64_t>::max();
+    sequenceManager.setSequenceIdCounter(sequenceId);
+    ovms::SequenceProcessingSpec spec(ovms::SEQUENCE_START, sequenceId);
+    sequenceManager.mockCreateSequence(spec);
+    ASSERT_TRUE(sequenceManager.sequenceExists(sequenceId));
+    ovms::SequenceProcessingSpec spec2(ovms::SEQUENCE_START, 0);
+    auto status = sequenceManager.mockCreateSequence(spec2);
+    ASSERT_TRUE(status.ok());
+    EXPECT_EQ(spec2.getSequenceId(), 1);
+    ASSERT_TRUE(sequenceManager.sequenceExists(spec2.getSequenceId()));
 }
 
 TEST(SequenceManager, RemoveSequenceOK) {

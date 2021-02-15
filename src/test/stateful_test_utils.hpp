@@ -147,6 +147,14 @@ public:
     MockedSequenceManager(uint32_t timeout, uint32_t maxSequenceNumber) :
         ovms::SequenceManager(timeout, maxSequenceNumber) {}
 
+    void setSequenceIdCounter(uint64_t newValue) {
+        this->sequenceIdCounter = newValue;
+    }
+
+    uint64_t mockGetUniqueSequenceId() {
+        return ovms::SequenceManager::getUniqueSequenceId();
+    }
+
     ovms::Status mockHasSequence(const uint64_t& sequenceId) {
         return ovms::SequenceManager::hasSequence(sequenceId);
     }

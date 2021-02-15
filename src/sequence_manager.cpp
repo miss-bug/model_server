@@ -23,16 +23,6 @@
 
 namespace ovms {
 
-void SequenceManager::initializeSequenceIdCounter() {
-    std::random_device rd;
-    std::mt19937_64 gen(rd());
-
-    std::uniform_int_distribution<uint64_t> dis(
-        std::numeric_limits<uint64_t>::min(),
-        std::numeric_limits<uint64_t>::max());
-    this->sequenceIdCounter = dis(gen);
-}
-
 uint64_t SequenceManager::getUniqueSequenceId() {
     SPDLOG_LOGGER_DEBUG(sequence_manager_logger, "No sequence id has been provided on SEQUENCE_START. Seeking unique sequence id...");
     bool uniqueIdFound = false;
